@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>残高管理</title>
+<style>
+body{
+    font-family:sans-serif;
+    text-align:center;
+    padding:20px;
+}
+.box{
+    border:1px solid #ccc;
+    border-radius:12px;
+    padding:20px;
+    max-width:300px;
+    margin:auto;
+}
+input,button{
+    width:200px;
+    padding:10px;
+    margin:8px;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+    <h2>お金管理</h2>
+    <p>収入: <span id="income">0</span>円</p>
+    <p>使用額: <span id="used">0</span>円</p>
+    <p>残り: <span id="remain">0</span>円</p>
+
+    <input type="number" id="incomeInput" placeholder="収入入力">
+    <button onclick="addIncome()">収入追加</button>
+
+    <br>
+
+    <input type="number" id="expenseInput" placeholder="使用金額入力">
+    <button onclick="addExpense()">支出追加</button>
+</div>
+
+<script>
+let income = Number(localStorage.getItem("income")) || 0;
+let used = Number(localStorage.getItem("used")) || 0;
+
+function update(){
+    document.getElementById("income").innerText = income;
+    document.getElementById("used").innerText = used;
+    document.getElementById("remain").innerText = income - used;
+
+    localStorage.setItem("income", income);
+    localStorage.setItem("used", used);
+}
+
+function addIncome(){
+    income += Number(document.getElementById("incomeInput").value);
+    document.getElementById("incomeInput").value = "";
+    update();
+}
+
+function addExpense(){
+    used += Number(document.getElementById("expenseInput").value);
+    document.getElementById("expenseInput").value = "";
+    update();
+}
+
+update();
+</script>
+
+</body>
+</html>
