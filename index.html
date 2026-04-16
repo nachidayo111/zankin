@@ -3,70 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>残高管理</title>
-<style>
-body{
-    font-family:sans-serif;
-    text-align:center;
-    padding:20px;
-}
-.box{
-    border:1px solid #ccc;
-    border-radius:12px;
-    padding:20px;
-    max-width:300px;
-    margin:auto;
-}
-input,button{
-    width:200px;
-    padding:10px;
-    margin:8px;
-}
-</style>
+<title>残り金額管理</title>
 </head>
 <body>
 
-<div class="box">
-    <h2>お金管理</h2>
-    <p>収入: <span id="income">0</span>円</p>
-    <p>使用額: <span id="used">0</span>円</p>
-    <p>残り: <span id="remain">0</span>円</p>
+<h2>お金管理</h2>
 
-    <input type="number" id="incomeInput" placeholder="収入入力">
-    <button onclick="addIncome()">収入追加</button>
+<p>収入: <span id="income">0</span>円</p>
+<p>使用額: <span id="used">0</span>円</p>
+<p id="remain">あと 0円</p>
 
-    <br>
+<input type="number" id="incomeInput" placeholder="収入">
+<button onclick="addIncome()">追加</button>
 
-    <input type="number" id="expenseInput" placeholder="使用金額入力">
-    <button onclick="addExpense()">支出追加</button>
-</div>
+<br><br>
 
-<script>
-let income = Number(localStorage.getItem("income")) || 0;
-let used = Number(localStorage.getItem("used")) || 0;
+<input type="number" id="expenseInput" placeholder="支出">
+<button onclick="addExpense()">追加</button>
 
-function update(){
-    document.getElementById("income").innerText = income;
-    document.getElementById("used").innerText = used;
-    document.getElementById("remain").innerText = income - used;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    localStorage.setItem("income", income);
-    localStorage.setItem("used", used);
+const firebaseConfig = {
+  apiKey: "ここに貼る",
+  authDomain: "ここに貼る",
+  projectId: "ここに貼る",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let income = 0;
+let used = 0;
+
+async function loadData() {
+  const ref = doc(db, "money", "main");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    income = snap.data().income;
+    used = snap.data().used;
+  }
+
+  update();
 }
 
-function addIncome(){
-    income += Number(document.getElementById("incomeInput").value);
-    document.getElementById("incomeInput").value = "";
-    update();
+async function saveData() {
+  await setDoc(doc(db, "money", "main"), {
+    income,
+    used
+  });
 }
 
-function addExpense(){
-    used += Number(document.getElementById("expenseInput").value);
-    document.getElementById("expenseInput").value = "";
-    update();
+function update() {
+  let remain = income - used;
+
+  document.getElementById("income").innerText = income;
+  document.getElementById("used").innerText = used;
+  document.getElementById("remain").innerText =
+    "あと " + remain.toLocaleString() + "円";
 }
 
-update();
+window.addIncome = async function () {
+  income += Number(document.getElementById("incomeInput").value);
+  await saveData();
+  update();
+};
+
+window.addExpense = async function () {
+  used += Number(document.getElementById("expenseInput").value);
+  await saveData();
+  update();
+};
+
+loadData();
 </script>
 
 </body>
