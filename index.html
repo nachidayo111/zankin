@@ -47,6 +47,10 @@ input,button{
     <input type="number" id="expenseInput" placeholder="使った金額">
     <br>
     <button onclick="addExpense()">支出追加</button>
+
+    <br><br>
+
+    <button onclick="resetData()">リセット</button>
 </div>
 
 <script>
@@ -83,6 +87,16 @@ function addExpense(){
     used += value;
     document.getElementById("expenseInput").value = "";
     updateDisplay();
+}
+
+function resetData(){
+    if(confirm("本当にリセットしますか？")){
+        income = 0;
+        used = 0;
+        localStorage.removeItem("income");
+        localStorage.removeItem("used");
+        updateDisplay();
+    }
 }
 
 updateDisplay();
