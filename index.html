@@ -9,15 +9,20 @@ body{
     font-family:sans-serif;
     text-align:center;
     padding:20px;
+    margin:0;
+    padding-bottom:80px;
+    background:#f8f8f8;
 }
 .box{
-    max-width:350px;
+    max-width:420px;
     margin:auto;
     border:1px solid #ccc;
     border-radius:15px;
     padding:20px;
+    margin-top:20px;
+    background:white;
 }
-input,button{
+input,button,select{
     width:220px;
     padding:10px;
     margin:8px;
@@ -27,16 +32,66 @@ input,button{
     font-size:30px;
     font-weight:bold;
 }
+#warningMessage{
+    color:red;
+    font-weight:bold;
+    margin-top:10px;
+}
+#historyBox,
+#searchBox{
+    display:none;
+}
+#historyList{
+    display:flex;
+    justify-content:space-between;
+    gap:15px;
+    align-items:flex-start;
+}
+.history-column{
+    width:45%;
+    text-align:left;
+}
+.history-divider{
+    width:2px;
+    min-height:200px;
+    background:#ccc;
+}
+.history-item{
+    border-bottom:1px solid #ddd;
+    padding:10px 0;
+    margin-bottom:8px;
+}
+.nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    background:#fff;
+    border-top:1px solid #ccc;
+    display:flex;
+    justify-content:space-around;
+    padding:10px 0;
+}
+.nav button{
+    width:auto;
+    padding:10px 15px;
+}
+#searchResult{
+    font-size:22px;
+    font-weight:bold;
+    margin-top:20px;
+}
 </style>
 </head>
 <body>
 
-<div class="box">
+<div class="box" id="homeBox">
     <h2>残り金額管理</h2>
 
     <p>収入: <span id="income">0</span>円</p>
     <p>使用額: <span id="used">0</span>円</p>
     <p id="remain">あと 0円</p>
+    <p id="warningMessage"></p>
 
     <input type="number" id="incomeInput" placeholder="収入入力">
     <br>
@@ -53,9 +108,50 @@ input,button{
     <button onclick="resetData()">リセット</button>
 </div>
 
+<div class="box" id="historyBox">
+    <h2>履歴</h2>
+    <div id="historyList"></div>
+</div>
+
+<div class="box" id="searchBox">
+    <h2>用途検索</h2>
+
+    <select id="searchType">
+        <option value="支出">支出</option>
+        <option value="収入">収入</option>
+    </select>
+
+    <br>
+
+    <input type="text" id="searchInput" placeholder="用途を入力">
+
+    <br>
+
+    <button onclick="searchUsage()">検索</button>
+
+    <p id="searchResult">合計 0円</p>
+</div>
+
+<div class="nav">
+    <button onclick="showHome()">ホーム</button>
+    <button onclick="showHistory()">履歴</button>
+    <button onclick="showSearch()">検索</button>
+</div>
+
 <script>
 let income = Number(localStorage.getItem("income")) || 0;
 let used = Number(localStorage.getItem("used")) || 0;
+let history = JSON.parse(localStorage.getItem("history")) || [];
+
+function getDeviceName(){
+    const ua = navigator.userAgent;
+
+    if(ua.includes("Windows")) return "Windows PC";
+    if(ua.includes("iPhone")) return "iPhone";
+    if(ua.includes("Android")) return "Android";
+    if(ua.includes("Mac")) return "Mac";
+    return "このデバイス";
+}
 
 function updateDisplay(){
     let remain = income - used;
@@ -65,38 +161,157 @@ function updateDisplay(){
     document.getElementById("remain").innerText =
         "あと " + remain.toLocaleString() + "円";
 
+    const warning = document.getElementById("warningMessage");
+
+    if(remain < 10000){
+        warning.innerText =
+            getDeviceName() +
+            "、常時お金使いすぎです☢ 何にいくら使ったか検索で調べてみることをお勧めします！";
+    }else{
+        warning.innerText = "";
+    }
+
     localStorage.setItem("income", income);
     localStorage.setItem("used", used);
+    localStorage.setItem("history", JSON.stringify(history));
 }
 
 function addIncome(){
-    let value = Number(document.getElementById("incomeInput").value);
+    const input = document.getElementById("incomeInput");
+    const value = Number(input.value);
 
-    if(!value) return;
+    if(value <= 0){
+        alert("金額を入力してください");
+        return;
+    }
+
+    const memo = prompt("何の収入ですか？", "");
+    if(memo === null) return;
 
     income += value;
-    document.getElementById("incomeInput").value = "";
+
+    history.unshift({
+        type:"収入",
+        amount:value,
+        memo:memo.trim() || "メモなし"
+    });
+
+    input.value = "";
     updateDisplay();
 }
 
 function addExpense(){
-    let value = Number(document.getElementById("expenseInput").value);
+    const input = document.getElementById("expenseInput");
+    const value = Number(input.value);
 
-    if(!value) return;
+    if(value <= 0){
+        alert("金額を入力してください");
+        return;
+    }
+
+    const memo = prompt("何に使いましたか？", "");
+    if(memo === null) return;
 
     used += value;
-    document.getElementById("expenseInput").value = "";
+
+    history.unshift({
+        type:"支出",
+        amount:value,
+        memo:memo.trim() || "メモなし"
+    });
+
+    input.value = "";
     updateDisplay();
+}
+
+function renderHistory(){
+    let list = document.getElementById("historyList");
+
+    let expenseHtml = "";
+    let incomeHtml = "";
+
+    history.forEach(item=>{
+        const html = `
+            <div class="history-item">
+                <strong>${item.amount.toLocaleString()}円</strong><br>
+                ${item.memo}
+            </div>
+        `;
+
+        if(item.type === "支出"){
+            expenseHtml += html;
+        } else {
+            incomeHtml += html;
+        }
+    });
+
+    list.innerHTML = `
+        <div class="history-column">
+            <h3>支出</h3>
+            ${expenseHtml || "<p>なし</p>"}
+        </div>
+        <div class="history-divider"></div>
+        <div class="history-column">
+            <h3>収入</h3>
+            ${incomeHtml || "<p>なし</p>"}
+        </div>
+    `;
+}
+
+function searchUsage(){
+    const keyword = document.getElementById("searchInput").value.trim();
+    const type = document.getElementById("searchType").value;
+
+    if(!keyword){
+        alert("用途を入力してください");
+        return;
+    }
+
+    let total = 0;
+
+    history.forEach(item=>{
+        if(item.type === type && item.memo.includes(keyword)){
+            total += item.amount;
+        }
+    });
+
+    document.getElementById("searchResult").innerText =
+        type + " / " + keyword + " 合計 " + total.toLocaleString() + "円";
 }
 
 function resetData(){
     if(confirm("本当にリセットしますか？")){
         income = 0;
         used = 0;
-        localStorage.removeItem("income");
-        localStorage.removeItem("used");
+        history = [];
+
+        localStorage.clear();
+
         updateDisplay();
+        renderHistory();
     }
+}
+
+function hideAll(){
+    document.getElementById("homeBox").style.display = "none";
+    document.getElementById("historyBox").style.display = "none";
+    document.getElementById("searchBox").style.display = "none";
+}
+
+function showHome(){
+    hideAll();
+    document.getElementById("homeBox").style.display = "block";
+}
+
+function showHistory(){
+    hideAll();
+    document.getElementById("historyBox").style.display = "block";
+    renderHistory();
+}
+
+function showSearch(){
+    hideAll();
+    document.getElementById("searchBox").style.display = "block";
 }
 
 updateDisplay();
